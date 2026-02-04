@@ -16,7 +16,7 @@ const databaseKeluarga = {
 const OFFICE_LOCATION = {
     lat: 2.795175, 
     lng: 101.502714,
-    radius: 250 
+    radius: 300 
 };
 
 // Inisialisasi Scanner
