@@ -1,11 +1,9 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwiGGORvgzwkqOchj3Nwc3l4_kVK8uN61MvymCzN_9He15QaxKFCFw57842O1c8mq1r/exec';
 const statusText = document.getElementById('status');
 const userDisplay = document.getElementById('user-display');
-
-// 1. Inisialisasi Audio Beep
 const beepSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
 
-// 2. Kunci Sistem (Mencegah data bertindih)
+// 1. Kunci Sistem (Untuk menghalang data bertindih yang terlalu laju)
 let isProcessing = false;
 
 const databaseKeluarga = {
@@ -35,13 +33,11 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 async function onScanSuccess(decodedText) {
-    // JIKA SISTEM SEDANG MEMPROSES, ABAIKAN IMBASAN BARU
+    // 2. Jika sedang memproses, abaikan semua imbasan baru (Anti-Spam)
     if (isProcessing) return;
 
     const namaAhli = databaseKeluarga[decodedText] || "ID TIDAK DIKENALI";
-    
     statusText.innerText = "Menyemak lokasi...";
-    statusText.style.color = "white";
 
     navigator.geolocation.getCurrentPosition(async (position) => {
         const userLat = position.coords.latitude;
@@ -49,14 +45,14 @@ async function onScanSuccess(decodedText) {
         const distance = calculateDistance(userLat, userLng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng);
 
         if (distance <= OFFICE_LOCATION.radius) {
-            // AKTIFKAN KUNCI SEGERA
+            // 3. Kunci sistem serta-merta
             isProcessing = true;
 
             beepSound.play().catch(e => console.log("Audio disekat:", e));
 
             userDisplay.innerText = `SELAMAT DATANG: ${namaAhli}`;
             userDisplay.style.display = "block";
-            statusText.innerText = `Berjaya! Menghantar data...`;
+            statusText.innerText = `Berjaya! Rekod dihantar...`;
             
             const payload = {
                 id: decodedText,
@@ -65,22 +61,21 @@ async function onScanSuccess(decodedText) {
             
             await sendData(payload);
 
-            // TUNGGU 5 SAAT SEBELUM MEMBENARKAN IMBASAN SETERUSNYA
+            // 4. Masa bertenang selama 10 saat sebelum boleh imbas semula
             setTimeout(() => {
                 isProcessing = false;
                 userDisplay.style.display = "none";
                 statusText.innerText = "Sedia untuk imbasan seterusnya...";
                 statusText.style.color = "white";
-            }, 5000);
+            }, 10000); 
 
         } else {
             statusText.style.color = "#ff4444";
             statusText.innerText = `LUAR KAWASAN (${Math.round(distance)}m dari pusat)`;
-            // Jangan kunci jika gagal lokasi supaya boleh cuba lagi
             isProcessing = false; 
         }
     }, (err) => {
-        statusText.innerText = "Sila aktifkan GPS (High Accuracy).";
+        statusText.innerText = "Sila aktifkan GPS.";
         isProcessing = false;
     }, {
         enableHighAccuracy: true,
@@ -100,7 +95,7 @@ async function sendData(payload) {
         statusText.innerText = `REKOD DISIMPAN!`;
     } catch (e) {
         statusText.innerText = "Ralat Rangkaian.";
-        isProcessing = false; // Buka kunci jika gagal hantar
+        isProcessing = false;
     }
 }
 
