@@ -3,7 +3,7 @@ const statusText = document.getElementById('status');
 const userDisplay = document.getElementById('user-display');
 const beepSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
 
-// 1. Kunci Sistem (Untuk menghalang data bertindih yang terlalu laju)
+// 1. Kunci Utama
 let isProcessing = false;
 
 const databaseKeluarga = {
@@ -19,6 +19,8 @@ const OFFICE_LOCATION = {
     radius: 250 
 };
 
+const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3; 
     const φ1 = lat1 * Math.PI/180;
@@ -33,55 +35,57 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 async function onScanSuccess(decodedText) {
-    // 2. Jika sedang memproses, abaikan semua imbasan baru (Anti-Spam)
+    // Langkah 1: Jika sistem sedang memproses, abaikan imbasan baru serta-merta
     if (isProcessing) return;
+    
+    // Langkah 2: Kunci status proses
+    isProcessing = true;
 
     const namaAhli = databaseKeluarga[decodedText] || "ID TIDAK DIKENALI";
-    statusText.innerText = "Menyemak lokasi...";
-
+    
     navigator.geolocation.getCurrentPosition(async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
         const distance = calculateDistance(userLat, userLng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng);
 
         if (distance <= OFFICE_LOCATION.radius) {
-            // 3. Kunci sistem serta-merta
-            isProcessing = true;
+            // Langkah 3: Berhenti scanner (Pause) supaya tiada imbasan kedua berlaku
+            html5QrcodeScanner.pause();
 
-            beepSound.play().catch(e => console.log("Audio disekat:", e));
+            // Langkah 4: Tanda Pengesahan Beep (Indikator Utama)
+            await beepSound.play(); 
 
-            userDisplay.innerText = `SELAMAT DATANG: ${namaAhli}`;
+            // Langkah 5: Paparan Antaramuka
+            userDisplay.innerText = `PENGESAHAN: ${namaAhli}`;
             userDisplay.style.display = "block";
-            statusText.innerText = `Berjaya! Rekod dihantar...`;
-            
+            statusText.innerText = "Beep disahkan. Menghantar rekod tunggal...";
+
             const payload = {
                 id: decodedText,
                 location: `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`
             };
-            
+
+            // Langkah 6: Hantar data ke GAS (Hanya sekali selepas beep)
             await sendData(payload);
 
-            // 4. Masa bertenang selama 10 saat sebelum boleh imbas semula
+            // Langkah 7: Masa bertenang (Cooldown) 8 saat
             setTimeout(() => {
                 isProcessing = false;
                 userDisplay.style.display = "none";
                 statusText.innerText = "Sedia untuk imbasan seterusnya...";
-                statusText.style.color = "white";
-            }, 10000); 
+                html5QrcodeScanner.resume(); // Hidupkan semula scanner
+            }, 8000);
 
         } else {
             statusText.style.color = "#ff4444";
-            statusText.innerText = `LUAR KAWASAN (${Math.round(distance)}m dari pusat)`;
-            isProcessing = false; 
+            statusText.innerText = `LUAR KAWASAN (${Math.round(distance)}m)`;
+            // Buka semula kunci selepas 3 saat jika ralat lokasi
+            setTimeout(() => { isProcessing = false; }, 3000);
         }
     }, (err) => {
         statusText.innerText = "Sila aktifkan GPS.";
         isProcessing = false;
-    }, {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
-    });
+    }, { enableHighAccuracy: true });
 }
 
 async function sendData(payload) {
@@ -92,12 +96,12 @@ async function sendData(payload) {
             body: JSON.stringify(payload)
         });
         statusText.style.color = "#00ff88";
-        statusText.innerText = `REKOD DISIMPAN!`;
+        statusText.innerText = "BERJAYA: Rekod masuk ke Google Sheets ✅";
     } catch (e) {
-        statusText.innerText = "Ralat Rangkaian.";
+        statusText.innerText = "Ralat Rangkaian. Sila cuba lagi.";
         isProcessing = false;
+        html5QrcodeScanner.resume();
     }
 }
 
-const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
 html5QrcodeScanner.render(onScanSuccess);
