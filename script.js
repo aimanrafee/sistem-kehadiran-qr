@@ -1,15 +1,16 @@
-const SCRIPT_URL = 'URL_GOOGLE_APPS_SCRIPT_ANDA';
+// Gantikan dengan URL Deployment ID anda
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwiGGORvgzwkqOchj3Nwc3l4_kVK8uN61MvymCzN_9He15QaxKFCFw57842O1c8mq1r/exec';
 const statusText = document.getElementById('status');
 
-// KONFIGURASI GEOFENCING (Contoh: Lokasi Pejabat)
+// KONFIGURASI GEOFENCING (KEMASKINI: 2.795175, 101.502714)
 const OFFICE_LOCATION = {
-    lat: 3.1390, // Tukar ikut koordinat anda
-    lng: 101.6869,
-    radius: 100 // Radius dalam meter
+    lat: 2.795175, 
+    lng: 101.502714,
+    radius: 10 // Sangat ketat: 10 meter
 };
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Radius bumi dalam meter
+    const R = 6371e3; 
     const φ1 = lat1 * Math.PI/180;
     const φ2 = lat2 * Math.PI/180;
     const Δφ = (lat2-lat1) * Math.PI/180;
@@ -21,37 +22,59 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-function onScanSuccess(decodedText, decodedResult) {
-    // 1. Dapatkan Lokasi (Bekerja walaupun offline jika GPS aktif)
+function onScanSuccess(decodedText) {
+    statusText.innerText = "Menyemak lokasi...";
+    statusText.style.color = "white";
+
     navigator.geolocation.getCurrentPosition(async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
         const distance = calculateDistance(userLat, userLng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng);
 
         if (distance <= OFFICE_LOCATION.radius) {
-            statusText.innerText = `Menghantar: ${decodedText}...`;
-            sendData(decodedText);
+            statusText.innerText = `ID dikesan. Menghantar...`;
+            
+            const payload = {
+                id: decodedText,
+                location: `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`
+            };
+            
+            sendData(payload);
         } else {
             statusText.style.color = "#ff4444";
-            statusText.innerText = "RALAT: Anda di luar kawasan!";
+            // Memaparkan jarak semasa untuk memudahkan staf tahu mereka perlu lebih dekat
+            statusText.innerText = `LUAR KAWASAN (${Math.round(distance)}m dari pusat)`;
+            
+            setTimeout(() => { 
+                statusText.style.color = "white"; 
+                statusText.innerText = "Sedia untuk imbasan..."; 
+            }, 4000);
         }
     }, (err) => {
-        statusText.innerText = "Sila aktifkan GPS peranti.";
+        statusText.innerText = "Sila aktifkan GPS (High Accuracy) pada peranti.";
+    }, {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
     });
 }
 
-async function sendData(name) {
+async function sendData(payload) {
     try {
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            body: JSON.stringify({ name: name })
+            body: JSON.stringify(payload)
         });
         statusText.style.color = "#00ff88";
-        statusText.innerText = `BERJAYA: ${name}`;
+        statusText.innerText = `BERJAYA: Rekod Disimpan!`;
+        
+        setTimeout(() => {
+            statusText.style.color = "white";
+            statusText.innerText = "Sedia untuk imbasan seterusnya...";
+        }, 5000);
     } catch (e) {
-        // Simpan ke IndexedDB jika benar-benar tiada internet
-        statusText.innerText = "Offline: Data disimpan dalam peranti.";
+        statusText.innerText = "Ralat Rangkaian. Data tidak dihantar.";
     }
 }
 
