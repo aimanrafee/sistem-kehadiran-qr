@@ -3,21 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QR Attendance - Offline & Geofencing</title>
+    <title>Smart QR 2050 - Sistem Kehadiran Keluarga</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #reader { width: 90vw; max-width: 500px; border: 2px solid #00ff88; border-radius: 15px; overflow: hidden; }
-        #status { margin-top: 20px; padding: 15px 30px; background: #1e1e1e; border-radius: 50px; border: 1px solid #333; text-align: center; min-width: 250px; }
-        h1 { color: #00ff88; font-size: 1.2rem; letter-spacing: 2px; }
+        body { 
+            margin: 0; 
+            background: #0a0a0a; 
+            color: white; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+        }
+
+        h1 { 
+            color: #00ff88; 
+            font-size: 1.4rem; 
+            letter-spacing: 3px; 
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        #reader { 
+            width: 90vw; 
+            max-width: 450px; 
+            border: 2px solid #00ff88; 
+            border-radius: 20px; 
+            overflow: hidden; 
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.1);
+            background: #1a1a1a;
+        }
+
+        .status-box {
+            width: 85vw;
+            max-width: 400px;
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        #status { 
+            padding: 15px 25px; 
+            background: #1e1e1e; 
+            border-radius: 50px; 
+            border: 1px solid #333; 
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Slot Nama Ahli Keluarga */
+        #user-display {
+            display: none;
+            margin-top: 15px;
+            padding: 20px;
+            background: #00ff88;
+            color: #000;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+            animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn-gps {
+            margin-top: 20px;
+            background: none;
+            border: 1px solid #444;
+            color: #777;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: 0.2s;
+        }
+
+        .btn-gps:active { background: #222; color: #aaa; }
+
+        @keyframes popUp {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Customizing HTML5-QRCode UI */
+        #reader__dashboard_section_csr button {
+            background: #00ff88 !important;
+            border: none !important;
+            color: black !important;
+            padding: 10px 20px !important;
+            border-radius: 5px !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+        }
     </style>
 </head>
 <body>
-    <h1>QR SCANNER OFFLINE</h1>
+
+    <h1>QR SCANNER 2050</h1>
+
     <div id="reader"></div>
-    <div id="status">Sedia untuk imbasan...</div>
+
+    <div class="status-box">
+        <div id="status">Sedia untuk imbasan...</div>
+        <div id="user-display"></div>
+        <button class="btn-gps" onclick="checkLocation()">Semak Koordinat Saya</button>
+    </div>
 
     <script src="script.js"></script>
+    
+    <script>
+        // Fungsi tambahan untuk membantu staf/keluarga semak GPS
+        function checkLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    alert(`Lokasi Anda:\nLat: ${position.coords.latitude}\nLng: ${position.coords.longitude}`);
+                }, (error) => {
+                    alert("Sila aktifkan GPS peranti anda.");
+                }, { enableHighAccuracy: true });
+            }
+        }
+    </script>
+
 </body>
 </html>
