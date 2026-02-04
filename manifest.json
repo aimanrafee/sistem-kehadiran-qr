@@ -1,16 +1,40 @@
 {
-  "name": "Smart QR 2050 Keluarga",
   "short_name": "QR 2050",
-  "description": "Sistem Kehadiran QR Offline & Geofencing",
-  "start_url": "index.html",
-  "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#00ff88",
+  "name": "Smart QR 2050 Keluarga",
+  "description": "Sistem Kehadiran QR Offline & Geofencing Pintar untuk Keluarga Rafee.",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1144/1144760.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1144/1144760.png",
+      "type": "image/png",
       "sizes": "512x512",
-      "type": "image/png"
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1144/1144760.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#0a0a0a",
+  "display": "standalone",
+  "scope": "./",
+  "theme_color": "#00ff88",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Buka Scanner",
+      "short_name": "Scanner",
+      "url": "index.html",
+      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/1144/1144760.png", "sizes": "192x192" }]
     }
   ]
 }
