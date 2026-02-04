@@ -2,6 +2,9 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwiGGORvgzwkqOchj3Nw
 const statusText = document.getElementById('status');
 const userDisplay = document.getElementById('user-display');
 
+// 1. Inisialisasi Audio Beep (Nyaring)
+const beepSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+
 // Data Rujukan Keluarga (Mapping ID ke Nama Penuh)
 const databaseKeluarga = {
     "QRKELUARGA0001": "MOHAMAD RAFEE BIN WAGIMIN",
@@ -14,7 +17,7 @@ const databaseKeluarga = {
 const OFFICE_LOCATION = {
     lat: 2.795175, 
     lng: 101.502714,
-    radius: 250 // Radius 250 meter
+    radius: 250 // Radius 250 meter untuk kestabilan tinggi
 };
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -31,12 +34,12 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 function onScanSuccess(decodedText) {
-    // 1. Dapatkan nama dari database tempatan berdasarkan ID QR
+    // Dapatkan nama dari database tempatan berdasarkan ID QR
     const namaAhli = databaseKeluarga[decodedText] || "ID TIDAK DIKENALI";
     
     statusText.innerText = "Menyemak lokasi...";
     statusText.style.color = "white";
-    userDisplay.style.display = "none"; // Reset paparan nama
+    userDisplay.style.display = "none";
 
     navigator.geolocation.getCurrentPosition(async (position) => {
         const userLat = position.coords.latitude;
@@ -44,7 +47,10 @@ function onScanSuccess(decodedText) {
         const distance = calculateDistance(userLat, userLng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng);
 
         if (distance <= OFFICE_LOCATION.radius) {
-            // 2. Paparkan Nama Ahli Keluarga pada UI
+            // 2. Mainkan Bunyi Beep Sebaik Sahaja Lokasi Sah
+            beepSound.play().catch(e => console.log("Audio disekat pelayar:", e));
+
+            // 3. Paparkan Nama Ahli Keluarga pada UI
             userDisplay.innerText = `SELAMAT DATANG: ${namaAhli}`;
             userDisplay.style.display = "block";
             statusText.innerText = `ID dikesan. Menghantar...`;
@@ -93,5 +99,6 @@ async function sendData(payload) {
     }
 }
 
+// Mulakan Scanner
 const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
 html5QrcodeScanner.render(onScanSuccess);
