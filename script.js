@@ -3,7 +3,7 @@ const statusText = document.getElementById('status');
 const userDisplay = document.getElementById('user-display');
 const beepSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
 
-// 1. Kunci Utama
+// 1. Kunci Utama Global
 let isProcessing = false;
 
 const databaseKeluarga = {
@@ -19,6 +19,7 @@ const OFFICE_LOCATION = {
     radius: 250 
 };
 
+// Inisialisasi Scanner
 const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -35,57 +36,76 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 async function onScanSuccess(decodedText) {
-    // Langkah 1: Jika sistem sedang memproses, abaikan imbasan baru serta-merta
+    // LANGKAH 1: Kunci serta-merta untuk mengelakkan "Race Condition"
     if (isProcessing) return;
-    
-    // Langkah 2: Kunci status proses
     isProcessing = true;
 
+    // LANGKAH 2: Hentikan kamera serta-merta (Brek Kecemasan)
+    html5QrcodeScanner.pause();
+
     const namaAhli = databaseKeluarga[decodedText] || "ID TIDAK DIKENALI";
-    
+    statusText.innerText = "Mengesahkan lokasi...";
+    statusText.style.color = "yellow";
+
     navigator.geolocation.getCurrentPosition(async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
         const distance = calculateDistance(userLat, userLng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng);
 
+        // LANGKAH 3: Pengesahan Geofencing
         if (distance <= OFFICE_LOCATION.radius) {
-            // Langkah 3: Berhenti scanner (Pause) supaya tiada imbasan kedua berlaku
-            html5QrcodeScanner.pause();
+            
+            try {
+                // LANGKAH 4: Bunyi Beep sebagai syarat wajib sebelum hantar data
+                await beepSound.play(); 
 
-            // Langkah 4: Tanda Pengesahan Beep (Indikator Utama)
-            await beepSound.play(); 
+                // LANGKAH 5: Kemaskini UI selepas bunyi disahkan
+                userDisplay.innerText = `PENGESAHAN: ${namaAhli}`;
+                userDisplay.style.display = "block";
+                statusText.innerText = "Beep OK. Menghantar rekod tunggal...";
+                statusText.style.color = "#00ff88";
 
-            // Langkah 5: Paparan Antaramuka
-            userDisplay.innerText = `PENGESAHAN: ${namaAhli}`;
-            userDisplay.style.display = "block";
-            statusText.innerText = "Beep disahkan. Menghantar rekod tunggal...";
+                const payload = {
+                    id: decodedText,
+                    location: `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`
+                };
 
-            const payload = {
-                id: decodedText,
-                location: `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`
-            };
+                // LANGKAH 6: Hantar data ke Google Sheets
+                await sendData(payload);
 
-            // Langkah 6: Hantar data ke GAS (Hanya sekali selepas beep)
-            await sendData(payload);
+            } catch (err) {
+                console.error("Ralat Audio/Data:", err);
+            }
 
-            // Langkah 7: Masa bertenang (Cooldown) 8 saat
+            // LANGKAH 7: Masa bertenang (Cooldown) selama 10 saat
             setTimeout(() => {
                 isProcessing = false;
                 userDisplay.style.display = "none";
                 statusText.innerText = "Sedia untuk imbasan seterusnya...";
-                html5QrcodeScanner.resume(); // Hidupkan semula scanner
-            }, 8000);
+                statusText.style.color = "white";
+                html5QrcodeScanner.resume(); // Hidupkan semula kamera
+            }, 10000);
 
         } else {
+            // Jika Luar Radius
             statusText.style.color = "#ff4444";
-            statusText.innerText = `LUAR KAWASAN (${Math.round(distance)}m)`;
-            // Buka semula kunci selepas 3 saat jika ralat lokasi
-            setTimeout(() => { isProcessing = false; }, 3000);
+            statusText.innerText = `GAGAL: Luar Kawasan (${Math.round(distance)}m)`;
+            
+            // Beri peluang imbas semula selepas 3 saat
+            setTimeout(() => {
+                isProcessing = false;
+                html5QrcodeScanner.resume();
+            }, 3000);
         }
     }, (err) => {
         statusText.innerText = "Sila aktifkan GPS.";
         isProcessing = false;
-    }, { enableHighAccuracy: true });
+        html5QrcodeScanner.resume();
+    }, { 
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+    });
 }
 
 async function sendData(payload) {
@@ -95,13 +115,14 @@ async function sendData(payload) {
             mode: 'no-cors',
             body: JSON.stringify(payload)
         });
-        statusText.style.color = "#00ff88";
         statusText.innerText = "BERJAYA: Rekod masuk ke Google Sheets ✅";
     } catch (e) {
         statusText.innerText = "Ralat Rangkaian. Sila cuba lagi.";
+        // Jika ralat rangkaian, buka semula kunci lebih awal
         isProcessing = false;
         html5QrcodeScanner.resume();
     }
 }
 
+// Mulakan Scanner
 html5QrcodeScanner.render(onScanSuccess);
