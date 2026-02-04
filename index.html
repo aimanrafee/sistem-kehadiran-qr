@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QR Attendance - Offline & Geofencing</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        #reader { width: 90vw; max-width: 500px; border: 2px solid #00ff88; border-radius: 15px; overflow: hidden; }
+        #status { margin-top: 20px; padding: 15px 30px; background: #1e1e1e; border-radius: 50px; border: 1px solid #333; text-align: center; min-width: 250px; }
+        h1 { color: #00ff88; font-size: 1.2rem; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+    <h1>QR SCANNER OFFLINE</h1>
+    <div id="reader"></div>
+    <div id="status">Sedia untuk imbasan...</div>
+
+    <script src="script.js"></script>
+</body>
+</html>
