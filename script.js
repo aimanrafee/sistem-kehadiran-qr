@@ -6,7 +6,7 @@ const statusText = document.getElementById('status');
 const OFFICE_LOCATION = {
     lat: 2.795175, 
     lng: 101.502714,
-    radius: 10 // Sangat ketat: 10 meter
+    radius: 100 // Sangat ketat: 100 meter
 };
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
