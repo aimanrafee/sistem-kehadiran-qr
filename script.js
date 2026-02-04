@@ -2,10 +2,12 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwiGGORvgzwkqOchj3Nw
 const statusText = document.getElementById('status');
 const userDisplay = document.getElementById('user-display');
 
-// 1. Inisialisasi Audio Beep (Nyaring)
+// 1. Inisialisasi Audio Beep
 const beepSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
 
-// Data Rujukan Keluarga (Mapping ID ke Nama Penuh)
+// 2. Kunci Sistem (Mencegah data bertindih)
+let isProcessing = false;
+
 const databaseKeluarga = {
     "QRKELUARGA0001": "MOHAMAD RAFEE BIN WAGIMIN",
     "QRKELUARGA0002": "DAHLIA BINTI DALI",
@@ -13,11 +15,10 @@ const databaseKeluarga = {
     "QRKELUARGA0004": "MUHAMMAD HARITH BIN MOHAMAD RAFEE"
 };
 
-// KONFIGURASI GEOFENCING
 const OFFICE_LOCATION = {
     lat: 2.795175, 
     lng: 101.502714,
-    radius: 250 // Radius 250 meter untuk kestabilan tinggi
+    radius: 250 
 };
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -33,13 +34,14 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-function onScanSuccess(decodedText) {
-    // Dapatkan nama dari database tempatan berdasarkan ID QR
+async function onScanSuccess(decodedText) {
+    // JIKA SISTEM SEDANG MEMPROSES, ABAIKAN IMBASAN BARU
+    if (isProcessing) return;
+
     const namaAhli = databaseKeluarga[decodedText] || "ID TIDAK DIKENALI";
     
     statusText.innerText = "Menyemak lokasi...";
     statusText.style.color = "white";
-    userDisplay.style.display = "none";
 
     navigator.geolocation.getCurrentPosition(async (position) => {
         const userLat = position.coords.latitude;
@@ -47,31 +49,39 @@ function onScanSuccess(decodedText) {
         const distance = calculateDistance(userLat, userLng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng);
 
         if (distance <= OFFICE_LOCATION.radius) {
-            // 2. Mainkan Bunyi Beep Sebaik Sahaja Lokasi Sah
-            beepSound.play().catch(e => console.log("Audio disekat pelayar:", e));
+            // AKTIFKAN KUNCI SEGERA
+            isProcessing = true;
 
-            // 3. Paparkan Nama Ahli Keluarga pada UI
+            beepSound.play().catch(e => console.log("Audio disekat:", e));
+
             userDisplay.innerText = `SELAMAT DATANG: ${namaAhli}`;
             userDisplay.style.display = "block";
-            statusText.innerText = `ID dikesan. Menghantar...`;
+            statusText.innerText = `Berjaya! Menghantar data...`;
             
             const payload = {
                 id: decodedText,
                 location: `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`
             };
             
-            sendData(payload);
+            await sendData(payload);
+
+            // TUNGGU 5 SAAT SEBELUM MEMBENARKAN IMBASAN SETERUSNYA
+            setTimeout(() => {
+                isProcessing = false;
+                userDisplay.style.display = "none";
+                statusText.innerText = "Sedia untuk imbasan seterusnya...";
+                statusText.style.color = "white";
+            }, 5000);
+
         } else {
             statusText.style.color = "#ff4444";
             statusText.innerText = `LUAR KAWASAN (${Math.round(distance)}m dari pusat)`;
-            
-            setTimeout(() => { 
-                statusText.style.color = "white"; 
-                statusText.innerText = "Sedia untuk imbasan..."; 
-            }, 4000);
+            // Jangan kunci jika gagal lokasi supaya boleh cuba lagi
+            isProcessing = false; 
         }
     }, (err) => {
-        statusText.innerText = "Sila aktifkan GPS (High Accuracy) pada peranti.";
+        statusText.innerText = "Sila aktifkan GPS (High Accuracy).";
+        isProcessing = false;
     }, {
         enableHighAccuracy: true,
         timeout: 5000,
@@ -87,18 +97,12 @@ async function sendData(payload) {
             body: JSON.stringify(payload)
         });
         statusText.style.color = "#00ff88";
-        statusText.innerText = `BERJAYA: Rekod Disimpan!`;
-        
-        setTimeout(() => {
-            statusText.style.color = "white";
-            statusText.innerText = "Sedia untuk imbasan seterusnya...";
-            userDisplay.style.display = "none";
-        }, 5000);
+        statusText.innerText = `REKOD DISIMPAN!`;
     } catch (e) {
-        statusText.innerText = "Ralat Rangkaian. Data tidak dihantar.";
+        statusText.innerText = "Ralat Rangkaian.";
+        isProcessing = false; // Buka kunci jika gagal hantar
     }
 }
 
-// Mulakan Scanner
 const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
 html5QrcodeScanner.render(onScanSuccess);
