@@ -14,7 +14,7 @@ const databaseKeluarga = {
 const OFFICE_LOCATION = {
     lat: 2.795175, 
     lng: 101.502714,
-    radius: 100 // Radius 100 meter
+    radius: 250 // Radius 250 meter
 };
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
